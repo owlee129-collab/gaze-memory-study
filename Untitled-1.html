@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Pupil Dilation & Memory Test</title>
+  <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+</head>
+<body>
+  <h2>Eye-Tracking + Recall Test</h2>
+  <p id="status">Click start and allow webcam access.</p>
+  <button id="startBtn">Start Experiment</button>
+
+  <video id="vid" width="720" height="405" controls></video>
+
+  <script>
+    const formURL = "https://docs.google.com/forms/d/e/1FAIpQLSc0VoqUL9nKXjf4Rb5pKQEV-XfepyTovQS4v6jggNpN0Xjaog/viewform";
+
+    const videos = [
+      'videos/emotional1.mp4', 'videos/emotional2.mp4',
+      'videos/educational1.mp4', 'videos/educational2.mp4',
+      'videos/neutral1.mp4', 'videos/neutral2.mp4',
+      'videos/fast1.mp4', 'videos/fast2.mp4',
+      'videos/slow1.mp4', 'videos/slow2.mp4'
+    ];
+
+    let idx = 0;
+    let currentLog = [];
+    let masterLog = [];
+
+    function startRecording() {
+      currentLog = [];
+      document.getElementById('status').innerText = "Recording gaze data...";
+
+      webgazer.setGazeListener((data, clock) => {
+        if (data) {
+          currentLog.push([Date.now(), data.x, data.y]);
+        }
+      }).begin();
+    }
+
+    function stopRecording(videoName) {
+      webgazer.clearGazeListener();
+      document.getElementById('status').innerText = "Stopped recording.";
+
+      // Append this video's log into masterLog with video name
+      currentLog.forEach(e => {
+        masterLog.push([videoName, ...e]);
+      });
+    }
+
+    function exportCSV() {
+      let csvContent = "data:text/csv;charset=utf-8,"
+        + "video,timestamp,x,y\n"
+        + masterLog.map(e => e.join(",")).join("\n");
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "gaze_data.csv");
+      document.body.appendChild(link);
+      link.click();
+    }
+
+    function playNextVideo() {
+      if (idx >= videos.length) {
+        document.getElementById('status').innerText = "All videos done. Saving data...";
+        exportCSV();
+        window.location.href = formURL;
+        return;
+      }
+      const video = document.getElementById('vid');
+      video.src = videos[idx];
+      idx++;
+      video.play();
+    }
+
+    const videoElement = document.getElementById('vid');
+    videoElement.addEventListener('play', () => {
+      startRecording();
+    });
+    videoElement.addEventListener('ended', () => {
+      stopRecording(videos[idx - 1]);
+      playNextVideo();
+    });
+
+    // Start button to kick off experiment
+    document.getElementById('startBtn').onclick = () => {
+      document.getElementById('startBtn').style.display = "none";
+      playNextVideo();
+    };
+  </script>
+</body>
+</html>
